@@ -90,6 +90,78 @@ function getPresetSize(type?: string) {
   return type.toUpperCase();
 }
 
+/**
+ * Menentukan apakah sebuah link kemungkinan merupakan
+ * link XML preset / tempat XML preset disimpan.
+ *
+ * Yang didukung:
+ * - file .xml
+ * - Google Drive
+ * - WhatsApp Channel
+ *
+ * Sengaja TIDAK memasukkan wa.me karena itu biasanya
+ * link order / kontak owner, bukan XML.
+ */
+function isXmlLink(
+  link:
+    | PresetLink
+    | {
+        url: string;
+        source?: string;
+        detail?: string;
+      }
+) {
+  const value = link.url?.trim();
+
+  if (!value) return false;
+
+  const type =
+    "type" in link
+      ? String(link.type || "").toLowerCase()
+      : "";
+
+  if (type.includes("xml")) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(value);
+
+    const host = parsed.hostname.toLowerCase();
+    const path = parsed.pathname.toLowerCase();
+
+    // Direct XML file
+    if (path.endsWith(".xml")) {
+      return true;
+    }
+
+    // Google Drive XML
+    if (
+      host === "drive.google.com" ||
+      host.endsWith(".drive.google.com")
+    ) {
+      return true;
+    }
+
+    // WhatsApp Channel
+    if (
+      host === "whatsapp.com" ||
+      host.endsWith(".whatsapp.com")
+    ) {
+      if (
+        path.startsWith("/channel/") ||
+        path.includes("/channel/")
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 function isTikTok(value: string) {
   try {
     const url = new URL(value.trim());
@@ -275,21 +347,31 @@ function Icon({
 
 export default function Home() {
   const [url, setUrl] = useState("");
-  const [result, setResult] = useState<FinderResult | null>(null);
+  const [result, setResult] =
+    useState<FinderResult | null>(null);
+
   const [status, setStatus] = useState<
     "idle" | "running" | "done" | "error"
   >("idle");
-  const [progress, setProgress] = useState("Ready to find presets.");
+
+  const [progress, setProgress] = useState(
+    "Ready to find presets."
+  );
+
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState<string | null>(null);
+  const [copied, setCopied] =
+    useState<string | null>(null);
+
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [activeTab, setActiveTab] = useState("home");
 
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const eventSourceRef =
+    useRef<EventSource | null>(null);
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("xiyu_history");
+      const stored =
+        localStorage.getItem("xiyu_history");
 
       if (stored) {
         setHistory(JSON.parse(stored));
@@ -314,10 +396,16 @@ export default function Home() {
           url: value,
           time: Date.now()
         },
-        ...old.filter((item) => item.url !== value)
+        ...old.filter(
+          (item) => item.url !== value
+        )
       ].slice(0, 10);
 
-      localStorage.setItem("xiyu_history", JSON.stringify(next));
+      localStorage.setItem(
+        "xiyu_history",
+        JSON.stringify(next)
+      );
+
       setHistory(next);
     } catch {
       // Ignore localStorage errors.
@@ -356,10 +444,13 @@ export default function Home() {
     eventSourceRef.current = source;
 
     source.addEventListener("log", (event) => {
-      const message = (event as MessageEvent).data;
+      const message =
+        (event as MessageEvent).data;
 
       if (typeof message === "string") {
-        setProgress(message.replace(/^"|"$/g, ""));
+        setProgress(
+          message.replace(/^"|"$/g, "")
+        );
       }
     });
 
@@ -371,9 +462,12 @@ export default function Home() {
 
         if (!parsed.ok) {
           setStatus("error");
+
           setError(
-            parsed.error || "The finder could not process this link."
+            parsed.error ||
+              "The finder could not process this link."
           );
+
           source.close();
           return;
         }
@@ -381,18 +475,26 @@ export default function Home() {
         setResult(parsed);
         setStatus("done");
         setProgress("Preset search completed.");
+
         source.close();
       } catch {
         setStatus("error");
-        setError("The server returned an unreadable response.");
+        setError(
+          "The server returned an unreadable response."
+        );
+
         source.close();
       }
     });
 
     source.addEventListener("error", () => {
-      if (source.readyState === EventSource.CLOSED) {
+      if (
+        source.readyState ===
+        EventSource.CLOSED
+      ) {
         if (status !== "done") {
           setStatus("error");
+
           setError(
             "The finder connection closed before the result arrived."
           );
@@ -403,6 +505,7 @@ export default function Home() {
 
   const clearResult = () => {
     eventSourceRef.current?.close();
+
     setResult(null);
     setStatus("idle");
     setProgress("Ready to find presets.");
@@ -412,6 +515,7 @@ export default function Home() {
   const copyLink = async (link: string) => {
     try {
       await navigator.clipboard.writeText(link);
+
       setCopied(link);
 
       window.setTimeout(() => {
@@ -424,7 +528,83 @@ export default function Home() {
     }
   };
 
-  const presets = result?.presetLinks || [];
+  /*
+   * =====================================================
+   * PRESET + XML DETECTION
+   * =====================================================
+   *
+   * presetLinks:
+   *   Biasanya berisi link Alight Motion 5MB.
+   *
+   * otherLinks:
+   *   Bisa berisi link tambahan yang ditemukan dari
+   *   description / komentar / profile / sumber lain.
+   *
+   * Kita gabungkan keduanya untuk mencari XML.
+   */
+
+  const allPresetLinks =
+    result?.presetLinks || [];
+
+  const otherLinks =
+    result?.otherLinks || [];
+
+  /*
+   * XML dipisahkan dari preset biasa.
+   *
+   * Contoh:
+   *
+   * 5MB
+   * https://alightcreative.com/...
+   *
+   * XML
+   * https://drive.google.com/file/...
+   *
+   * atau:
+   *
+   * XML
+   * https://whatsapp.com/channel/...
+   */
+  const xmlLinks = useMemo(() => {
+    const candidates = [
+      ...allPresetLinks.filter((link) =>
+        isXmlLink(link)
+      ),
+
+      ...otherLinks.filter((link) =>
+        isXmlLink(link)
+      )
+    ];
+
+    const seen = new Set<string>();
+
+    return candidates.filter((link) => {
+      const value = link.url?.trim();
+
+      if (!value) return false;
+
+      if (seen.has(value)) {
+        return false;
+      }
+
+      seen.add(value);
+
+      return true;
+    });
+  }, [allPresetLinks, otherLinks]);
+
+  /*
+   * Semua preset non-XML tetap dianggap sebagai preset
+   * utama / 5MB.
+   */
+  const presets = useMemo(
+    () =>
+      allPresetLinks.filter(
+        (link) => !isXmlLink(link)
+      ),
+    [allPresetLinks]
+  );
+
   const video = result?.video;
   const author = result?.authorDetail;
 
@@ -447,18 +627,30 @@ export default function Home() {
         <header className="topbar">
           <div className="brand">
             <div className="brand-sparkle">
-              <Icon name="sparkle" size={25} />
+              <Icon
+                name="sparkle"
+                size={25}
+              />
             </div>
 
             <div>
-              <div className="brand-name">XIYU</div>
-              <div className="brand-sub">FIND PRESET</div>
+              <div className="brand-name">
+                XIYU
+              </div>
+
+              <div className="brand-sub">
+                FIND PRESET
+              </div>
             </div>
           </div>
 
           <div className="hero-actions">
             <span className="finder-pill">
-              <Icon name="sparkle" size={15} />
+              <Icon
+                name="sparkle"
+                size={15}
+              />
+
               FIND PRESET
             </span>
 
@@ -467,14 +659,21 @@ export default function Home() {
               aria-label="Menu"
               type="button"
             >
-              <Icon name="menu" size={25} />
+              <Icon
+                name="menu"
+                size={25}
+              />
             </button>
           </div>
         </header>
 
         <div className="hero-copy">
           <div className="script-line">
-            <Icon name="sparkle" size={18} />
+            <Icon
+              name="sparkle"
+              size={18}
+            />
+
             Find
           </div>
 
@@ -504,13 +703,19 @@ export default function Home() {
 
       <div className="content-wrap">
         <section className="search-card">
-          <div className="tiktok-symbol">♪</div>
+          <div className="tiktok-symbol">
+            ♪
+          </div>
 
           <input
             value={url}
-            onChange={(event) => setUrl(event.target.value)}
+            onChange={(event) =>
+              setUrl(event.target.value)
+            }
             onKeyDown={(event) => {
-              if (event.key === "Enter") search();
+              if (event.key === "Enter") {
+                search();
+              }
             }}
             placeholder="Paste TikTok link here..."
             aria-label="TikTok URL"
@@ -535,7 +740,10 @@ export default function Home() {
             disabled={status === "running"}
             aria-label="Search"
           >
-            <Icon name="search" size={25} />
+            <Icon
+              name="search"
+              size={25}
+            />
           </button>
         </section>
 
@@ -544,7 +752,10 @@ export default function Home() {
             <div className="progress-spinner" />
 
             <div>
-              <strong>Finding your preset...</strong>
+              <strong>
+                Finding your preset...
+              </strong>
+
               <span>{progress}</span>
             </div>
           </section>
@@ -552,14 +763,22 @@ export default function Home() {
 
         {status === "error" && error && (
           <section className="error-card">
-            <div className="error-icon">!</div>
+            <div className="error-icon">
+              !
+            </div>
 
             <div>
-              <strong>Search stopped</strong>
+              <strong>
+                Search stopped
+              </strong>
+
               <span>{error}</span>
             </div>
 
-            <button type="button" onClick={clearResult}>
+            <button
+              type="button"
+              onClick={clearResult}
+            >
               ×
             </button>
           </section>
@@ -568,14 +787,21 @@ export default function Home() {
         {status === "idle" && !result && (
           <section className="welcome-card">
             <div className="welcome-icon">
-              <Icon name="sparkle" size={29} />
+              <Icon
+                name="sparkle"
+                size={29}
+              />
             </div>
 
             <div>
-              <h2>Find your next preset</h2>
+              <h2>
+                Find your next preset
+              </h2>
+
               <p>
-                Paste a TikTok video link and let XIYU
-                search the description, profile and comments.
+                Paste a TikTok video link and
+                let XIYU search the description,
+                profile and comments.
               </p>
             </div>
           </section>
@@ -585,9 +811,13 @@ export default function Home() {
           <>
             <section className="result-video-card">
               <div className="video-preview">
-                {video?.playUrlNoWm || video?.playUrl ? (
+                {video?.playUrlNoWm ||
+                video?.playUrl ? (
                   <video
-                    src={video.playUrlNoWm || video.playUrl}
+                    src={
+                      video.playUrlNoWm ||
+                      video.playUrl
+                    }
                     poster={video.cover}
                     controls
                     playsInline
@@ -595,7 +825,10 @@ export default function Home() {
                   />
                 ) : (
                   <img
-                    src={video?.cover || "/hero.jpg"}
+                    src={
+                      video?.cover ||
+                      "/hero.jpg"
+                    }
                     alt=""
                   />
                 )}
@@ -604,7 +837,10 @@ export default function Home() {
                   !video?.playUrl &&
                   video?.cover && (
                     <div className="video-play-fallback">
-                      <Icon name="play" size={28} />
+                      <Icon
+                        name="play"
+                        size={28}
+                      />
                     </div>
                   )}
               </div>
@@ -619,18 +855,25 @@ export default function Home() {
                     />
                   ) : (
                     <div className="avatar avatar-placeholder">
-                      <Icon name="user" size={20} />
+                      <Icon
+                        name="user"
+                        size={20}
+                      />
                     </div>
                   )}
 
                   <div className="author-heading">
                     <strong>
                       {result.author ||
-                        `@${author?.uniqueId || "unknown"}`}
+                        `@${
+                          author?.uniqueId ||
+                          "unknown"
+                        }`}
                     </strong>
 
                     <span>
-                      {author?.nickname || "TikTok creator"}
+                      {author?.nickname ||
+                        "TikTok creator"}
                     </span>
                   </div>
 
@@ -642,7 +885,10 @@ export default function Home() {
                       className="round-external"
                       aria-label="Open TikTok profile"
                     >
-                      <Icon name="external" size={19} />
+                      <Icon
+                        name="external"
+                        size={19}
+                      />
                     </a>
                   )}
                 </div>
@@ -655,26 +901,47 @@ export default function Home() {
 
                 <div className="stats-row">
                   <div className="stat">
-                    <Icon name="eye" size={19} />
+                    <Icon
+                      name="eye"
+                      size={19}
+                    />
+
                     <strong>
-                      {formatNumber(video?.stats?.views)}
+                      {formatNumber(
+                        video?.stats?.views
+                      )}
                     </strong>
+
                     <span>Views</span>
                   </div>
 
                   <div className="stat">
-                    <Icon name="heart" size={19} />
+                    <Icon
+                      name="heart"
+                      size={19}
+                    />
+
                     <strong>
-                      {formatNumber(video?.stats?.likes)}
+                      {formatNumber(
+                        video?.stats?.likes
+                      )}
                     </strong>
+
                     <span>Likes</span>
                   </div>
 
                   <div className="stat">
-                    <Icon name="comment" size={19} />
+                    <Icon
+                      name="comment"
+                      size={19}
+                    />
+
                     <strong>
-                      {formatNumber(video?.stats?.comments)}
+                      {formatNumber(
+                        video?.stats?.comments
+                      )}
                     </strong>
+
                     <span>Comments</span>
                   </div>
                 </div>
@@ -691,15 +958,22 @@ export default function Home() {
                   />
                 ) : (
                   <div className="avatar account-avatar avatar-placeholder">
-                    <Icon name="user" size={23} />
+                    <Icon
+                      name="user"
+                      size={23}
+                    />
                   </div>
                 )}
 
                 <div className="account-name">
                   <span>Account</span>
+
                   <strong>
                     {result.author ||
-                      `@${author?.uniqueId || "unknown"}`}
+                      `@${
+                        author?.uniqueId ||
+                        "unknown"
+                      }`}
                   </strong>
                 </div>
 
@@ -711,7 +985,11 @@ export default function Home() {
                     className="profile-button"
                   >
                     View profile
-                    <Icon name="arrow" size={16} />
+
+                    <Icon
+                      name="arrow"
+                      size={16}
+                    />
                   </a>
                 )}
               </div>
@@ -719,8 +997,16 @@ export default function Home() {
               <div className="account-details">
                 {author?.bio && (
                   <div className="detail-item">
-                    <Icon name="user" size={17} />
-                    <span>{author.bio.split("\n")[0]}</span>
+                    <Icon
+                      name="user"
+                      size={17}
+                    />
+
+                    <span>
+                      {author.bio.split(
+                        "\n"
+                      )[0]}
+                    </span>
                   </div>
                 )}
 
@@ -731,22 +1017,40 @@ export default function Home() {
                     rel="noopener noreferrer"
                     className="detail-item link-detail"
                   >
-                    <Icon name="link" size={17} />
-                    <span>{author.bioLink}</span>
+                    <Icon
+                      name="link"
+                      size={17}
+                    />
+
+                    <span>
+                      {author.bioLink}
+                    </span>
                   </a>
                 )}
               </div>
             </section>
 
+            {/* =====================================================
+                PRESET 5MB
+               ===================================================== */}
+
             <section className="preset-section">
               <div className="section-heading">
                 <div className="section-title">
-                  <Icon name="sparkle" size={22} />
-                  <h2>Preset links</h2>
+                  <Icon
+                    name="sparkle"
+                    size={22}
+                  />
+
+                  <h2>
+                    Preset links
+                  </h2>
 
                   <span className="count-pill">
                     {presets.length}{" "}
-                    {presets.length === 1 ? "result" : "results"}
+                    {presets.length === 1
+                      ? "result"
+                      : "results"}
                   </span>
                 </div>
 
@@ -757,160 +1061,405 @@ export default function Home() {
 
               {presets.length === 0 ? (
                 <div className="empty-card">
-                  <Icon name="sparkle" size={30} />
-                  <strong>No preset found</strong>
+                  <Icon
+                    name="sparkle"
+                    size={30}
+                  />
+
+                  <strong>
+                    No 5MB preset found
+                  </strong>
+
                   <span>
-                    No Alight Motion preset links were found
+                    No Alight Motion 5MB
+                    preset links were found
                     in this TikTok.
                   </span>
                 </div>
               ) : (
                 <div className="preset-list">
-                  {presets.map((preset, index) => {
-                    const isCopied = copied === preset.url;
+                  {presets.map(
+                    (preset, index) => {
+                      const isCopied =
+                        copied ===
+                        preset.url;
 
-                    return (
-                      <article
-                        className="preset-card"
-                        key={`${preset.url}-${index}`}
-                      >
-                        <div className="preset-thumb-wrap">
-                          {preset.thumb ? (
-                            <img
-                              src={preset.thumb}
-                              alt=""
-                              className="preset-thumb"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="preset-thumb fallback-thumb">
-                              <Icon name="sparkle" size={35} />
-                            </div>
-                          )}
+                      return (
+                        <article
+                          className="preset-card"
+                          key={`${preset.url}-${index}`}
+                        >
+                          <div className="preset-thumb-wrap">
+                            {preset.thumb ? (
+                              <img
+                                src={
+                                  preset.thumb
+                                }
+                                alt=""
+                                className="preset-thumb"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="preset-thumb fallback-thumb">
+                                <Icon
+                                  name="sparkle"
+                                  size={35}
+                                />
+                              </div>
+                            )}
 
-                          {index === 0 && (
-                            <span className="crown">♛</span>
-                          )}
-
-                          <span className="size-badge">
-                            {getPresetSize(preset.type)}
-                          </span>
-                        </div>
-
-                        <div className="preset-content">
-                          <h3>
-                            {preset.title || "Alight Motion Preset"}
-                          </h3>
-
-                          <div className="preset-badges">
-                            <span className="type-badge">
-                              <Icon name="sparkle" size={13} />
-                              {getPresetSize(preset.type)}
-                            </span>
-
-                            {preset.byAuthor && (
-                              <span className="author-badge">
-                                BY THIS ACCOUNT
+                            {index === 0 && (
+                              <span className="crown">
+                                ♛
                               </span>
                             )}
-                          </div>
 
-                          {preset.detail && (
-                            <span className="preset-author">
-                              @{preset.detail.replace(/^@/, "")}
-                            </span>
-                          )}
-
-                          <div className="preset-url">
-                            {preset.url}
-                          </div>
-
-                          <div className="preset-actions">
-                            <a
-                              href={preset.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="open-button"
-                            >
-                              <Icon name="external" size={18} />
-                              Open preset
-                            </a>
-
-                            <button
-                              type="button"
-                              className={`copy-button ${
-                                isCopied ? "copied" : ""
-                              }`}
-                              onClick={() =>
-                                copyLink(preset.url)
-                              }
-                            >
-                              {isCopied ? (
-                                <Icon name="check" size={18} />
-                              ) : (
-                                <Icon name="copy" size={18} />
+                            <span className="size-badge">
+                              {getPresetSize(
+                                preset.type
                               )}
-
-                              {isCopied
-                                ? "Copied"
-                                : "Copy link"}
-                            </button>
+                            </span>
                           </div>
-                        </div>
-                      </article>
-                    );
-                  })}
+
+                          <div className="preset-content">
+                            <h3>
+                              {preset.title ||
+                                "Alight Motion Preset"}
+                            </h3>
+
+                            <div className="preset-badges">
+                              <span className="type-badge">
+                                <Icon
+                                  name="sparkle"
+                                  size={13}
+                                />
+
+                                {getPresetSize(
+                                  preset.type
+                                )}
+                              </span>
+
+                              {preset.byAuthor && (
+                                <span className="author-badge">
+                                  BY THIS ACCOUNT
+                                </span>
+                              )}
+                            </div>
+
+                            {preset.detail && (
+                              <span className="preset-author">
+                                @
+                                {preset.detail.replace(
+                                  /^@/,
+                                  ""
+                                )}
+                              </span>
+                            )}
+
+                            <div className="preset-url">
+                              {preset.url}
+                            </div>
+
+                            <div className="preset-actions">
+                              <a
+                                href={
+                                  preset.url
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="open-button"
+                              >
+                                <Icon
+                                  name="external"
+                                  size={18}
+                                />
+
+                                Open preset
+                              </a>
+
+                              <button
+                                type="button"
+                                className={`copy-button ${
+                                  isCopied
+                                    ? "copied"
+                                    : ""
+                                }`}
+                                onClick={() =>
+                                  copyLink(
+                                    preset.url
+                                  )
+                                }
+                              >
+                                {isCopied ? (
+                                  <Icon
+                                    name="check"
+                                    size={18}
+                                  />
+                                ) : (
+                                  <Icon
+                                    name="copy"
+                                    size={18}
+                                  />
+                                )}
+
+                                {isCopied
+                                  ? "Copied"
+                                  : "Copy link"}
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    }
+                  )}
                 </div>
               )}
             </section>
+
+            {/* =====================================================
+                XML PRESET
+               ===================================================== */}
+
+            {xmlLinks.length > 0 && (
+              <section className="preset-section xml-section">
+                <div className="section-heading">
+                  <div className="section-title">
+                    <Icon
+                      name="link"
+                      size={22}
+                    />
+
+                    <h2>
+                      XML Preset
+                    </h2>
+
+                    <span className="count-pill">
+                      {xmlLinks.length}{" "}
+                      {xmlLinks.length === 1
+                        ? "result"
+                        : "results"}
+                    </span>
+                  </div>
+
+                  <span className="section-script">
+                    XML ♕
+                  </span>
+                </div>
+
+                <div className="preset-list">
+                  {xmlLinks.map(
+                    (link, index) => {
+                      const isCopied =
+                        copied === link.url;
+
+                      return (
+                        <article
+                          className="preset-card"
+                          key={`xml-${link.url}-${index}`}
+                        >
+                          <div className="preset-thumb-wrap">
+                            <div className="preset-thumb fallback-thumb">
+                              <span
+                                style={{
+                                  fontWeight: 800,
+                                  fontSize: 22,
+                                  letterSpacing:
+                                    "0.08em"
+                                }}
+                              >
+                                XML
+                              </span>
+                            </div>
+
+                            {index === 0 && (
+                              <span className="crown">
+                                ♛
+                              </span>
+                            )}
+
+                            <span className="size-badge">
+                              XML
+                            </span>
+                          </div>
+
+                          <div className="preset-content">
+                            <h3>
+                              {link.detail ||
+                                link.source ||
+                                "Preset XML"}
+                            </h3>
+
+                            <div className="preset-badges">
+                              <span className="type-badge">
+                                <Icon
+                                  name="link"
+                                  size={13}
+                                />
+
+                                XML
+                              </span>
+                            </div>
+
+                            <div className="preset-url">
+                              {link.url}
+                            </div>
+
+                            <div className="preset-actions">
+                              <a
+                                href={
+                                  link.url
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="open-button"
+                              >
+                                <Icon
+                                  name="external"
+                                  size={18}
+                                />
+
+                                Open XML
+                              </a>
+
+                              <button
+                                type="button"
+                                className={`copy-button ${
+                                  isCopied
+                                    ? "copied"
+                                    : ""
+                                }`}
+                                onClick={() =>
+                                  copyLink(
+                                    link.url
+                                  )
+                                }
+                              >
+                                {isCopied ? (
+                                  <Icon
+                                    name="check"
+                                    size={18}
+                                  />
+                                ) : (
+                                  <Icon
+                                    name="copy"
+                                    size={18}
+                                  />
+                                )}
+
+                                {isCopied
+                                  ? "Copied"
+                                  : "Copy link"}
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    }
+                  )}
+                </div>
+              </section>
+            )}
           </>
         )}
 
         <footer className="footer">
           <div className="footer-sparkles">
-            <Icon name="sparkle" size={16} />
-            <span>XIYU FIND PRESET</span>
-            <Icon name="sparkle" size={16} />
+            <Icon
+              name="sparkle"
+              size={16}
+            />
+
+            <span>
+              XIYU FIND PRESET
+            </span>
+
+            <Icon
+              name="sparkle"
+              size={16}
+            />
           </div>
 
-          <p>Find presets. Create something beautiful.</p>
+          <p>
+            Find presets. Create something
+            beautiful.
+          </p>
         </footer>
       </div>
 
       <nav className="bottom-nav">
         <button
-          className={activeTab === "home" ? "active" : ""}
+          className={
+            activeTab === "home"
+              ? "active"
+              : ""
+          }
           type="button"
-          onClick={() => setActiveTab("home")}
+          onClick={() =>
+            setActiveTab("home")
+          }
         >
-          <Icon name="home" size={21} />
+          <Icon
+            name="home"
+            size={21}
+          />
+
           <span>Home</span>
         </button>
 
         <button
-          className={activeTab === "history" ? "active" : ""}
+          className={
+            activeTab === "history"
+              ? "active"
+              : ""
+          }
           type="button"
-          onClick={() => setActiveTab("history")}
+          onClick={() =>
+            setActiveTab("history")
+          }
         >
-          <Icon name="clock" size={21} />
+          <Icon
+            name="clock"
+            size={21}
+          />
+
           <span>History</span>
         </button>
 
         <button
-          className={activeTab === "saved" ? "active" : ""}
+          className={
+            activeTab === "saved"
+              ? "active"
+              : ""
+          }
           type="button"
-          onClick={() => setActiveTab("saved")}
+          onClick={() =>
+            setActiveTab("saved")
+          }
         >
-          <Icon name="bookmark" size={21} />
+          <Icon
+            name="bookmark"
+            size={21}
+          />
+
           <span>Saved</span>
         </button>
 
         <button
-          className={activeTab === "profile" ? "active" : ""}
+          className={
+            activeTab === "profile"
+              ? "active"
+              : ""
+          }
           type="button"
-          onClick={() => setActiveTab("profile")}
+          onClick={() =>
+            setActiveTab("profile")
+          }
         >
-          <Icon name="user" size={21} />
+          <Icon
+            name="user"
+            size={21}
+          />
+
           <span>Profile</span>
         </button>
       </nav>
