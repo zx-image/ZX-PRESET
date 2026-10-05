@@ -2,15 +2,16 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "XIYU FIND PRESET",
-  description: "Find Alight Motion presets from TikTok.",
-  applicationName: "XIYU FIND PRESET",
+  title: "ZX PRESET FINDER",
+  description: "Alight Motion Preset & XML Stream Utility",
+  applicationName: "ZX PRESET FINDER",
   keywords: [
     "Alight Motion",
     "preset",
     "TikTok",
     "AM preset",
-    "XIYU"
+    "XML preset",
+    "ZX"
   ]
 };
 
@@ -18,7 +19,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f8f6ff"
+  themeColor: "#07080a"
 };
 
 export default function RootLayout({
@@ -27,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body>{children}</body>
     </html>
   );
