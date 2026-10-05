@@ -349,20 +349,26 @@ a {
   border: 1px solid rgba(255, 59, 59, 0.25);
 }
 
-/* VIDEO PREVIEW */
+/* VIDEO PREVIEW - PORTRAIT TIKTOK 9:16 & CLEAN */
 .result-video-card {
   margin-top: 14px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--surface);
 }
 
 .video-preview {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  max-width: 310px;
+  margin: 12px auto 0;
+  aspect-ratio: 9 / 16;
   background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .video-preview video,
@@ -370,10 +376,11 @@ a {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .video-info {
-  padding: 14px;
+  padding: 16px 14px 14px;
 }
 
 .video-author-row {
@@ -400,6 +407,18 @@ a {
   color: var(--muted);
 }
 
+.round-external {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--muted);
+  background: #17181c;
+  border: 1px solid var(--line);
+}
+
 .description {
   margin: 12px 0;
   color: #b5b8be;
@@ -410,7 +429,7 @@ a {
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  padding-top: 10px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 
@@ -469,6 +488,9 @@ a {
 
 .profile-button {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 6px 12px;
   border: 1px solid rgba(255, 59, 59, 0.4);
   border-radius: 8px;
