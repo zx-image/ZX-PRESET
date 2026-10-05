@@ -218,7 +218,7 @@ function Icon({
     case "eye":
       return (
         <svg {...common}>
-          <path d="M2.5 12s3.2-5 9.5-5 9.5 5 9.5 5-3.2 5-9.5 5-9.5-5-9.5-5Z" />
+          <path d="M2.5 12s3.2-5 9.5-5 9.5 5 9.5 5-3.2 5-9.5 5-9.5-5Z" />
           <circle cx="12" cy="12" r="2.5" />
         </svg>
       );
@@ -663,6 +663,7 @@ export default function Home() {
                     poster={video.cover}
                     controls
                     playsInline
+                    loop
                     preload="metadata"
                   />
                 ) : (
