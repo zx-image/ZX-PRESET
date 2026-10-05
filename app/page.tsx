@@ -70,11 +70,6 @@ type FinderResult = {
   error?: string;
 };
 
-type HistoryItem = {
-  url: string;
-  time: number;
-};
-
 function formatNumber(value?: number) {
   if (typeof value !== "number") return "0";
 
@@ -167,7 +162,6 @@ function Icon({
   name:
     | "search"
     | "sparkle"
-    | "menu"
     | "play"
     | "eye"
     | "heart"
@@ -177,10 +171,8 @@ function Icon({
     | "external"
     | "copy"
     | "check"
-    | "clock"
-    | "bookmark"
-    | "home"
-    | "arrow";
+    | "arrow"
+    | "tiktok";
   size?: number;
 }) {
   const common = {
@@ -208,13 +200,6 @@ function Icon({
         <svg {...common}>
           <path d="m12 3-1.4 5.6L5 10l5.6 1.4L12 17l1.4-5.6L19 10l-5.6-1.4L12 3Z" />
           <path d="m19 16-.7 2.3L16 19l2.3.7L19 22l.7-2.3L22 19l-2.3-.7L19 16Z" />
-        </svg>
-      );
-
-    case "menu":
-      return (
-        <svg {...common}>
-          <path d="M4 7h16M4 12h16M4 17h16" />
         </svg>
       );
 
@@ -293,35 +278,23 @@ function Icon({
         </svg>
       );
 
-    case "clock":
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="8.5" />
-          <path d="M12 7v5l3 2" />
-        </svg>
-      );
-
-    case "bookmark":
-      return (
-        <svg {...common}>
-          <path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-3.5L6 21V4.5Z" />
-        </svg>
-      );
-
-    case "home":
-      return (
-        <svg {...common}>
-          <path d="m3.5 10 8.5-7 8.5 7" />
-          <path d="M5.5 9v11h13V9" />
-          <path d="M9.5 20v-6h5v6" />
-        </svg>
-      );
-
     case "arrow":
       return (
         <svg {...common}>
           <path d="M5 12h14" />
           <path d="m13 6 6 6-6 6" />
+        </svg>
+      );
+
+    case "tiktok":
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-2.891 2.89 2.896 2.896 0 0 1-2.89-2.89 2.896 2.896 0 0 1 2.89-2.89c.394 0 .768.077 1.11.217V9.525a6.31 6.31 0 0 0-1.11-.098C5.975 9.427 3 12.402 3 16.072 3 19.742 5.975 22.717 9.473 22.717c3.498 0 6.473-2.975 6.473-6.645V8.894a8.21 8.21 0 0 0 4.773 1.528V6.977a4.832 4.832 0 0 1-1.13-.291z" />
         </svg>
       );
 
@@ -347,54 +320,13 @@ export default function Home() {
   const [copied, setCopied] =
     useState<string | null>(null);
 
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [activeTab, setActiveTab] = useState("home");
-
   const eventSourceRef =
     useRef<EventSource | null>(null);
 
   useEffect(() => {
-    try {
-      const stored =
-        localStorage.getItem("zx_preset_history");
-
-      if (stored) {
-        setHistory(JSON.parse(stored));
-      }
-    } catch {
-      setHistory([]);
-    }
-
     return () => {
       eventSourceRef.current?.close();
     };
-  }, []);
-
-  const saveHistory = useCallback((value: string) => {
-    try {
-      const old: HistoryItem[] = JSON.parse(
-        localStorage.getItem("zx_preset_history") || "[]"
-      );
-
-      const next = [
-        {
-          url: value,
-          time: Date.now()
-        },
-        ...old.filter(
-          (item) => item.url !== value
-        )
-      ].slice(0, 10);
-
-      localStorage.setItem(
-        "zx_preset_history",
-        JSON.stringify(next)
-      );
-
-      setHistory(next);
-    } catch {
-      // Abaikan galat localStorage
-    }
   }, []);
 
   const search = useCallback(() => {
@@ -418,8 +350,6 @@ export default function Home() {
     setError("");
     setStatus("running");
     setProgress("Menghubungkan ke parser stream...");
-
-    saveHistory(value);
 
     const endpoint =
       `/api/find?url=${encodeURIComponent(value)}`;
@@ -486,7 +416,7 @@ export default function Home() {
         }
       }
     });
-  }, [url, saveHistory, status]);
+  }, [url, status]);
 
   const clearResult = () => {
     eventSourceRef.current?.close();
@@ -594,17 +524,6 @@ export default function Home() {
             <span className="finder-pill">
               • PRESET EXTRACTOR UTILITY
             </span>
-
-            <button
-              className="icon-button menu-button"
-              aria-label="Menu"
-              type="button"
-            >
-              <Icon
-                name="menu"
-                size={22}
-              />
-            </button>
           </div>
         </header>
 
@@ -612,7 +531,7 @@ export default function Home() {
           <div className="script-line">
             <Icon
               name="sparkle"
-              size={14}
+              size={13}
             />
             Stream & Preset Inspector
           </div>
@@ -624,7 +543,7 @@ export default function Home() {
           </h1>
 
           <p>
-            Ekstrak otomatis preset XML, Google Drive, & link 5MB langsung dari konten VT TikTok.
+            Ekstrak otomatis preset XML, Google Drive, & link 5MB dari video TikTok.
           </p>
         </div>
       </section>
@@ -950,7 +869,7 @@ export default function Home() {
               </div>
             </section>
 
-            {/* PRESET 5MB SECTION */}
+            {/* PRESET 5MB */}
             <section className="preset-section">
               <div className="section-heading">
                 <div className="section-title">
@@ -1089,7 +1008,7 @@ export default function Home() {
               )}
             </section>
 
-            {/* PRESET XML SECTION */}
+            {/* XML PRESET */}
             {xmlLinks.length > 0 && (
               <section className="preset-section">
                 <div className="section-heading">
@@ -1206,6 +1125,27 @@ export default function Home() {
         )}
 
         <footer className="footer">
+          <div className="social-links">
+            <a
+              href="https://www.tiktok.com/@zx.image"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="social-pill"
+            >
+              <Icon name="tiktok" size={13} />
+              @zx.image
+            </a>
+            <a
+              href="https://www.tiktok.com/@z.e.x.l.l.y"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="social-pill"
+            >
+              <Icon name="tiktok" size={13} />
+              @z.e.x.l.l.y
+            </a>
+          </div>
+
           <div className="footer-sparkles">
             <span>
               ZX PRESET FINDER
@@ -1213,84 +1153,10 @@ export default function Home() {
           </div>
 
           <p>
-            Alight Motion Preset & XML Stream Utility • TikTok: @zx.image
+            Alight Motion Preset & XML Stream Utility • Tools Analisis Video Publik
           </p>
         </footer>
       </div>
-
-      <nav className="bottom-nav">
-        <button
-          className={
-            activeTab === "home"
-              ? "active"
-              : ""
-          }
-          type="button"
-          onClick={() =>
-            setActiveTab("home")
-          }
-        >
-          <Icon
-            name="home"
-            size={18}
-          />
-          <span>Home</span>
-        </button>
-
-        <button
-          className={
-            activeTab === "history"
-              ? "active"
-              : ""
-          }
-          type="button"
-          onClick={() =>
-            setActiveTab("history")
-          }
-        >
-          <Icon
-            name="clock"
-            size={18}
-          />
-          <span>History</span>
-        </button>
-
-        <button
-          className={
-            activeTab === "saved"
-              ? "active"
-              : ""
-          }
-          type="button"
-          onClick={() =>
-            setActiveTab("saved")
-          }
-        >
-          <Icon
-            name="bookmark"
-            size={18}
-          />
-          <span>Saved</span>
-        </button>
-
-        <button
-          className={
-            activeTab === "profile"
-              ? "active"
-              : ""
-          }
-          type="button"
-          onClick={() =>
-            setActiveTab("profile")
-          }
-        >
-          <Icon
-            name="user"
-            size={18}
-          />
-          <span>Profile</span>
-        </button>
-      </nav>
     </main>
   );
 }
