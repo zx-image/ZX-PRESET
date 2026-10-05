@@ -90,18 +90,6 @@ function getPresetSize(type?: string) {
   return type.toUpperCase();
 }
 
-/**
- * Menentukan apakah sebuah link kemungkinan merupakan
- * link XML preset / tempat XML preset disimpan.
- *
- * Yang didukung:
- * - file .xml
- * - Google Drive
- * - WhatsApp Channel
- *
- * Sengaja TIDAK memasukkan wa.me karena itu biasanya
- * link order / kontak owner, bukan XML.
- */
 function isXmlLink(
   link:
     | PresetLink
@@ -130,12 +118,10 @@ function isXmlLink(
     const host = parsed.hostname.toLowerCase();
     const path = parsed.pathname.toLowerCase();
 
-    // Direct XML file
     if (path.endsWith(".xml")) {
       return true;
     }
 
-    // Google Drive XML
     if (
       host === "drive.google.com" ||
       host.endsWith(".drive.google.com")
@@ -143,7 +129,6 @@ function isXmlLink(
       return true;
     }
 
-    // WhatsApp Channel
     if (
       host === "whatsapp.com" ||
       host.endsWith(".whatsapp.com")
@@ -177,7 +162,7 @@ function isTikTok(value: string) {
 
 function Icon({
   name,
-  size = 22
+  size = 20
 }: {
   name:
     | "search"
@@ -204,7 +189,7 @@ function Icon({
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: 1.8,
+    strokeWidth: 2,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const
   };
@@ -355,7 +340,7 @@ export default function Home() {
   >("idle");
 
   const [progress, setProgress] = useState(
-    "Ready to find presets."
+    "Siap mengekstrak preset."
   );
 
   const [error, setError] = useState("");
@@ -408,7 +393,7 @@ export default function Home() {
 
       setHistory(next);
     } catch {
-      // Ignore localStorage errors.
+      // Abaikan galat localStorage
     }
   }, []);
 
@@ -416,13 +401,13 @@ export default function Home() {
     const value = url.trim();
 
     if (!value) {
-      setError("Paste a TikTok link first.");
+      setError("Tempel tautan video TikTok terlebih dahulu.");
       setStatus("error");
       return;
     }
 
     if (!isTikTok(value)) {
-      setError("That doesn't look like a TikTok link.");
+      setError("Format URL bukan tautan TikTok yang valid.");
       setStatus("error");
       return;
     }
@@ -432,7 +417,7 @@ export default function Home() {
     setResult(null);
     setError("");
     setStatus("running");
-    setProgress("Connecting to finder...");
+    setProgress("Menghubungkan ke parser stream...");
 
     saveHistory(value);
 
@@ -465,7 +450,7 @@ export default function Home() {
 
           setError(
             parsed.error ||
-              "The finder could not process this link."
+              "Gagal mengekstrak preset dari tautan ini."
           );
 
           source.close();
@@ -474,13 +459,13 @@ export default function Home() {
 
         setResult(parsed);
         setStatus("done");
-        setProgress("Preset search completed.");
+        setProgress("Ekstraksi preset selesai.");
 
         source.close();
       } catch {
         setStatus("error");
         setError(
-          "The server returned an unreadable response."
+          "Server mengembalikan format respons tidak terbaca."
         );
 
         source.close();
@@ -496,7 +481,7 @@ export default function Home() {
           setStatus("error");
 
           setError(
-            "The finder connection closed before the result arrived."
+            "Koneksi ekstraksi terputus sebelum data diterima."
           );
         }
       }
@@ -508,7 +493,7 @@ export default function Home() {
 
     setResult(null);
     setStatus("idle");
-    setProgress("Ready to find presets.");
+    setProgress("Siap mengekstrak preset.");
     setError("");
   };
 
@@ -524,15 +509,9 @@ export default function Home() {
         );
       }, 1800);
     } catch {
-      setError("Unable to copy the link.");
+      setError("Gagal menyalin tautan.");
     }
   };
-
-  /*
-   * =====================================================
-   * PRESET + XML DETECTION
-   * =====================================================
-   */
 
   const allPresetLinks =
     result?.presetLinks || [];
@@ -587,12 +566,8 @@ export default function Home() {
 
   return (
     <main className="site-shell">
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-
       <section className="hero">
         <div className="hero-image" />
-
         <div className="hero-overlay" />
 
         <header className="topbar">
@@ -600,7 +575,7 @@ export default function Home() {
             <div className="brand-sparkle">
               <Icon
                 name="sparkle"
-                size={25}
+                size={22}
               />
             </div>
 
@@ -617,12 +592,7 @@ export default function Home() {
 
           <div className="hero-actions">
             <span className="finder-pill">
-              <Icon
-                name="sparkle"
-                size={15}
-              />
-
-              ZX FINDER
+              • PRESET EXTRACTOR UTILITY
             </span>
 
             <button
@@ -632,7 +602,7 @@ export default function Home() {
             >
               <Icon
                 name="menu"
-                size={25}
+                size={22}
               />
             </button>
           </div>
@@ -642,33 +612,20 @@ export default function Home() {
           <div className="script-line">
             <Icon
               name="sparkle"
-              size={18}
+              size={14}
             />
-
-            Find
+            Stream & Preset Inspector
           </div>
 
           <h1>
-            Alight Motion
+            ALIGHT MOTION
             <br />
-            Preset
+            PRESET FINDER
           </h1>
 
           <p>
-            From TikTok,
-            <br />
-            Faster & Easier
+            Ekstrak otomatis preset XML, Google Drive, & link 5MB langsung dari konten VT TikTok.
           </p>
-        </div>
-
-        <div className="hero-side-text">
-          Good
-          <br />
-          Preset
-          <br />
-          Good
-          <br />
-          Vibes ♡
         </div>
       </section>
 
@@ -688,7 +645,7 @@ export default function Home() {
                 search();
               }
             }}
-            placeholder="Paste TikTok link here..."
+            placeholder="Tempel tautan video TikTok di sini..."
             aria-label="TikTok URL"
             spellCheck={false}
           />
@@ -711,10 +668,7 @@ export default function Home() {
             disabled={status === "running"}
             aria-label="Search"
           >
-            <Icon
-              name="search"
-              size={25}
-            />
+            Inspect
           </button>
         </section>
 
@@ -724,7 +678,7 @@ export default function Home() {
 
             <div>
               <strong>
-                Finding your preset...
+                MEMPROSES DATA VT...
               </strong>
 
               <span>{progress}</span>
@@ -740,7 +694,7 @@ export default function Home() {
 
             <div>
               <strong>
-                Search stopped
+                EKSTRAKSI TERHENTI
               </strong>
 
               <span>{error}</span>
@@ -760,19 +714,17 @@ export default function Home() {
             <div className="welcome-icon">
               <Icon
                 name="sparkle"
-                size={29}
+                size={24}
               />
             </div>
 
             <div>
               <h2>
-                Find your next preset
+                METODE INSPEKSI PRESET
               </h2>
 
               <p>
-                Paste a TikTok video link and
-                let ZX search the description,
-                profile and comments.
+                Sistem akan membaca deskripsi, pinned comment, profil kreator, serta link bio akun target untuk mengekstrak seluruh tautan preset Alight Motion & XML.
               </p>
             </div>
           </section>
@@ -810,7 +762,7 @@ export default function Home() {
                     <div className="video-play-fallback">
                       <Icon
                         name="play"
-                        size={28}
+                        size={24}
                       />
                     </div>
                   )}
@@ -825,10 +777,10 @@ export default function Home() {
                       className="avatar large-avatar"
                     />
                   ) : (
-                    <div className="avatar avatar-placeholder">
+                    <div className="avatar avatar-placeholder large-avatar">
                       <Icon
                         name="user"
-                        size={20}
+                        size={18}
                       />
                     </div>
                   )}
@@ -844,7 +796,7 @@ export default function Home() {
 
                     <span>
                       {author?.nickname ||
-                        "TikTok creator"}
+                        "TikTok Creator"}
                     </span>
                   </div>
 
@@ -858,7 +810,7 @@ export default function Home() {
                     >
                       <Icon
                         name="external"
-                        size={19}
+                        size={16}
                       />
                     </a>
                   )}
@@ -874,7 +826,7 @@ export default function Home() {
                   <div className="stat">
                     <Icon
                       name="eye"
-                      size={19}
+                      size={16}
                     />
 
                     <strong>
@@ -883,13 +835,13 @@ export default function Home() {
                       )}
                     </strong>
 
-                    <span>Views</span>
+                    <span>VIEWS</span>
                   </div>
 
                   <div className="stat">
                     <Icon
                       name="heart"
-                      size={19}
+                      size={16}
                     />
 
                     <strong>
@@ -898,13 +850,13 @@ export default function Home() {
                       )}
                     </strong>
 
-                    <span>Likes</span>
+                    <span>LIKES</span>
                   </div>
 
                   <div className="stat">
                     <Icon
                       name="comment"
-                      size={19}
+                      size={16}
                     />
 
                     <strong>
@@ -913,7 +865,7 @@ export default function Home() {
                       )}
                     </strong>
 
-                    <span>Comments</span>
+                    <span>COMMENTS</span>
                   </div>
                 </div>
               </div>
@@ -931,13 +883,13 @@ export default function Home() {
                   <div className="avatar account-avatar avatar-placeholder">
                     <Icon
                       name="user"
-                      size={23}
+                      size={18}
                     />
                   </div>
                 )}
 
                 <div className="account-name">
-                  <span>Account</span>
+                  <span>TARGET ACCOUNT</span>
 
                   <strong>
                     {result.author ||
@@ -955,11 +907,10 @@ export default function Home() {
                     rel="noopener noreferrer"
                     className="profile-button"
                   >
-                    View profile
-
+                    Profil
                     <Icon
                       name="arrow"
-                      size={16}
+                      size={13}
                     />
                   </a>
                 )}
@@ -970,13 +921,11 @@ export default function Home() {
                   <div className="detail-item">
                     <Icon
                       name="user"
-                      size={17}
+                      size={14}
                     />
 
                     <span>
-                      {author.bio.split(
-                        "\n"
-                      )[0]}
+                      {author.bio.split("\n")[0]}
                     </span>
                   </div>
                 )}
@@ -990,7 +939,7 @@ export default function Home() {
                   >
                     <Icon
                       name="link"
-                      size={17}
+                      size={14}
                     />
 
                     <span>
@@ -1001,47 +950,33 @@ export default function Home() {
               </div>
             </section>
 
-            {/* PRESET 5MB */}
+            {/* PRESET 5MB SECTION */}
             <section className="preset-section">
               <div className="section-heading">
                 <div className="section-title">
                   <Icon
                     name="sparkle"
-                    size={22}
+                    size={16}
                   />
 
                   <h2>
-                    Preset links
+                    TAUTAN PRESET 5MB
                   </h2>
 
                   <span className="count-pill">
-                    {presets.length}{" "}
-                    {presets.length === 1
-                      ? "result"
-                      : "results"}
+                    {presets.length} DITEMUKAN
                   </span>
                 </div>
-
-                <span className="section-script">
-                  Best Preset ♕
-                </span>
               </div>
 
               {presets.length === 0 ? (
                 <div className="empty-card">
-                  <Icon
-                    name="sparkle"
-                    size={30}
-                  />
-
                   <strong>
-                    No 5MB preset found
+                    Preset 5MB Tidak Ditemukan
                   </strong>
 
                   <span>
-                    No Alight Motion 5MB
-                    preset links were found
-                    in this TikTok.
+                    Tidak ada link langsung Alight Creative 5MB di dalam video ini.
                   </span>
                 </div>
               ) : (
@@ -1071,15 +1006,9 @@ export default function Home() {
                               <div className="preset-thumb fallback-thumb">
                                 <Icon
                                   name="sparkle"
-                                  size={35}
+                                  size={24}
                                 />
                               </div>
-                            )}
-
-                            {index === 0 && (
-                              <span className="crown">
-                                ♛
-                              </span>
                             )}
 
                             <span className="size-badge">
@@ -1092,16 +1021,11 @@ export default function Home() {
                           <div className="preset-content">
                             <h3>
                               {preset.title ||
-                                "Alight Motion Preset"}
+                                "Alight Motion 5MB Preset"}
                             </h3>
 
                             <div className="preset-badges">
                               <span className="type-badge">
-                                <Icon
-                                  name="sparkle"
-                                  size={13}
-                                />
-
                                 {getPresetSize(
                                   preset.type
                                 )}
@@ -1109,20 +1033,10 @@ export default function Home() {
 
                               {preset.byAuthor && (
                                 <span className="author-badge">
-                                  BY THIS ACCOUNT
+                                  ORIGINAL AUTHOR
                                 </span>
                               )}
                             </div>
-
-                            {preset.detail && (
-                              <span className="preset-author">
-                                @
-                                {preset.detail.replace(
-                                  /^@/,
-                                  ""
-                                )}
-                              </span>
-                            )}
 
                             <div className="preset-url">
                               {preset.url}
@@ -1139,10 +1053,9 @@ export default function Home() {
                               >
                                 <Icon
                                   name="external"
-                                  size={18}
+                                  size={13}
                                 />
-
-                                Open preset
+                                Buka
                               </a>
 
                               <button
@@ -1158,21 +1071,13 @@ export default function Home() {
                                   )
                                 }
                               >
-                                {isCopied ? (
-                                  <Icon
-                                    name="check"
-                                    size={18}
-                                  />
-                                ) : (
-                                  <Icon
-                                    name="copy"
-                                    size={18}
-                                  />
-                                )}
-
+                                <Icon
+                                  name={isCopied ? "check" : "copy"}
+                                  size={13}
+                                />
                                 {isCopied
-                                  ? "Copied"
-                                  : "Copy link"}
+                                  ? "Tersalin"
+                                  : "Salin Link"}
                               </button>
                             </div>
                           </div>
@@ -1184,31 +1089,24 @@ export default function Home() {
               )}
             </section>
 
-            {/* XML PRESET */}
+            {/* PRESET XML SECTION */}
             {xmlLinks.length > 0 && (
-              <section className="preset-section xml-section">
+              <section className="preset-section">
                 <div className="section-heading">
                   <div className="section-title">
                     <Icon
                       name="link"
-                      size={22}
+                      size={16}
                     />
 
                     <h2>
-                      XML Preset
+                      TAUTAN PRESET XML / CLOUD
                     </h2>
 
                     <span className="count-pill">
-                      {xmlLinks.length}{" "}
-                      {xmlLinks.length === 1
-                        ? "result"
-                        : "results"}
+                      {xmlLinks.length} DITEMUKAN
                     </span>
                   </div>
-
-                  <span className="section-script">
-                    XML ♕
-                  </span>
                 </div>
 
                 <div className="preset-list">
@@ -1226,8 +1124,8 @@ export default function Home() {
                             <div className="preset-thumb fallback-thumb">
                               <span
                                 style={{
-                                  fontWeight: 800,
-                                  fontSize: 22,
+                                  fontWeight: 900,
+                                  fontSize: 16,
                                   letterSpacing:
                                     "0.08em"
                                 }}
@@ -1235,12 +1133,6 @@ export default function Home() {
                                 XML
                               </span>
                             </div>
-
-                            {index === 0 && (
-                              <span className="crown">
-                                ♛
-                              </span>
-                            )}
 
                             <span className="size-badge">
                               XML
@@ -1251,17 +1143,12 @@ export default function Home() {
                             <h3>
                               {link.detail ||
                                 link.source ||
-                                "Preset XML"}
+                                "Berkas XML Preset"}
                             </h3>
 
                             <div className="preset-badges">
                               <span className="type-badge">
-                                <Icon
-                                  name="link"
-                                  size={13}
-                                />
-
-                                XML
+                                XML PRESET
                               </span>
                             </div>
 
@@ -1280,10 +1167,9 @@ export default function Home() {
                               >
                                 <Icon
                                   name="external"
-                                  size={18}
+                                  size={13}
                                 />
-
-                                Open XML
+                                Buka XML
                               </a>
 
                               <button
@@ -1299,21 +1185,13 @@ export default function Home() {
                                   )
                                 }
                               >
-                                {isCopied ? (
-                                  <Icon
-                                    name="check"
-                                    size={18}
-                                  />
-                                ) : (
-                                  <Icon
-                                    name="copy"
-                                    size={18}
-                                  />
-                                )}
-
+                                <Icon
+                                  name={isCopied ? "check" : "copy"}
+                                  size={13}
+                                />
                                 {isCopied
-                                  ? "Copied"
-                                  : "Copy link"}
+                                  ? "Tersalin"
+                                  : "Salin Link"}
                               </button>
                             </div>
                           </div>
@@ -1329,23 +1207,13 @@ export default function Home() {
 
         <footer className="footer">
           <div className="footer-sparkles">
-            <Icon
-              name="sparkle"
-              size={16}
-            />
-
             <span>
               ZX PRESET FINDER
             </span>
-
-            <Icon
-              name="sparkle"
-              size={16}
-            />
           </div>
 
           <p>
-            Crafted for creators. Find presets, build master edits.
+            Alight Motion Preset & XML Stream Utility • TikTok: @zx.image
           </p>
         </footer>
       </div>
@@ -1364,9 +1232,8 @@ export default function Home() {
         >
           <Icon
             name="home"
-            size={21}
+            size={18}
           />
-
           <span>Home</span>
         </button>
 
@@ -1383,9 +1250,8 @@ export default function Home() {
         >
           <Icon
             name="clock"
-            size={21}
+            size={18}
           />
-
           <span>History</span>
         </button>
 
@@ -1402,9 +1268,8 @@ export default function Home() {
         >
           <Icon
             name="bookmark"
-            size={21}
+            size={18}
           />
-
           <span>Saved</span>
         </button>
 
@@ -1421,9 +1286,8 @@ export default function Home() {
         >
           <Icon
             name="user"
-            size={21}
+            size={18}
           />
-
           <span>Profile</span>
         </button>
       </nav>
