@@ -371,7 +371,7 @@ export default function Home() {
   useEffect(() => {
     try {
       const stored =
-        localStorage.getItem("xiyu_history");
+        localStorage.getItem("zx_preset_history");
 
       if (stored) {
         setHistory(JSON.parse(stored));
@@ -388,7 +388,7 @@ export default function Home() {
   const saveHistory = useCallback((value: string) => {
     try {
       const old: HistoryItem[] = JSON.parse(
-        localStorage.getItem("xiyu_history") || "[]"
+        localStorage.getItem("zx_preset_history") || "[]"
       );
 
       const next = [
@@ -402,7 +402,7 @@ export default function Home() {
       ].slice(0, 10);
 
       localStorage.setItem(
-        "xiyu_history",
+        "zx_preset_history",
         JSON.stringify(next)
       );
 
@@ -532,15 +532,6 @@ export default function Home() {
    * =====================================================
    * PRESET + XML DETECTION
    * =====================================================
-   *
-   * presetLinks:
-   *   Biasanya berisi link Alight Motion 5MB.
-   *
-   * otherLinks:
-   *   Bisa berisi link tambahan yang ditemukan dari
-   *   description / komentar / profile / sumber lain.
-   *
-   * Kita gabungkan keduanya untuk mencari XML.
    */
 
   const allPresetLinks =
@@ -549,22 +540,6 @@ export default function Home() {
   const otherLinks =
     result?.otherLinks || [];
 
-  /*
-   * XML dipisahkan dari preset biasa.
-   *
-   * Contoh:
-   *
-   * 5MB
-   * https://alightcreative.com/...
-   *
-   * XML
-   * https://drive.google.com/file/...
-   *
-   * atau:
-   *
-   * XML
-   * https://whatsapp.com/channel/...
-   */
   const xmlLinks = useMemo(() => {
     const candidates = [
       ...allPresetLinks.filter((link) =>
@@ -593,10 +568,6 @@ export default function Home() {
     });
   }, [allPresetLinks, otherLinks]);
 
-  /*
-   * Semua preset non-XML tetap dianggap sebagai preset
-   * utama / 5MB.
-   */
   const presets = useMemo(
     () =>
       allPresetLinks.filter(
@@ -635,11 +606,11 @@ export default function Home() {
 
             <div>
               <div className="brand-name">
-                XIYU
+                ZX
               </div>
 
               <div className="brand-sub">
-                FIND PRESET
+                PRESET FINDER
               </div>
             </div>
           </div>
@@ -651,7 +622,7 @@ export default function Home() {
                 size={15}
               />
 
-              FIND PRESET
+              ZX FINDER
             </span>
 
             <button
@@ -800,7 +771,7 @@ export default function Home() {
 
               <p>
                 Paste a TikTok video link and
-                let XIYU search the description,
+                let ZX search the description,
                 profile and comments.
               </p>
             </div>
@@ -1030,10 +1001,7 @@ export default function Home() {
               </div>
             </section>
 
-            {/* =====================================================
-                PRESET 5MB
-               ===================================================== */}
-
+            {/* PRESET 5MB */}
             <section className="preset-section">
               <div className="section-heading">
                 <div className="section-title">
@@ -1216,10 +1184,7 @@ export default function Home() {
               )}
             </section>
 
-            {/* =====================================================
-                XML PRESET
-               ===================================================== */}
-
+            {/* XML PRESET */}
             {xmlLinks.length > 0 && (
               <section className="preset-section xml-section">
                 <div className="section-heading">
@@ -1370,7 +1335,7 @@ export default function Home() {
             />
 
             <span>
-              XIYU FIND PRESET
+              ZX PRESET FINDER
             </span>
 
             <Icon
@@ -1380,8 +1345,7 @@ export default function Home() {
           </div>
 
           <p>
-            Find presets. Create something
-            beautiful.
+            Crafted for creators. Find presets, build master edits.
           </p>
         </footer>
       </div>
