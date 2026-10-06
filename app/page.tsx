@@ -172,7 +172,8 @@ function Icon({
     | "copy"
     | "check"
     | "arrow"
-    | "tiktok";
+    | "tiktok"
+    | "instagram";
   size?: number;
 }) {
   const common = {
@@ -295,6 +296,15 @@ function Icon({
           fill="currentColor"
         >
           <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-2.891 2.89 2.896 2.896 0 0 1-2.89-2.89 2.896 2.896 0 0 1 2.89-2.89c.394 0 .768.077 1.11.217V9.525a6.31 6.31 0 0 0-1.11-.098C5.975 9.427 3 12.402 3 16.072 3 19.742 5.975 22.717 9.473 22.717c3.498 0 6.473-2.975 6.473-6.645V8.894a8.21 8.21 0 0 0 4.773 1.528V6.977a4.832 4.832 0 0 1-1.13-.291z" />
+        </svg>
+      );
+
+    case "instagram":
+      return (
+        <svg {...common}>
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
         </svg>
       );
 
@@ -1137,12 +1147,12 @@ export default function Home() {
               @zx.image
             </a>
             <a
-              href="https://www.tiktok.com/@z.e.x.l.l.y"
+              href="https://www.instagram.com/z.e.x.l.l.y"
               target="_blank"
               rel="noopener noreferrer"
               className="social-pill"
             >
-              <Icon name="tiktok" size={13} />
+              <Icon name="instagram" size={13} />
               @z.e.x.l.l.y
             </a>
           </div>
